@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 const openai = new OpenAI({
-  apiKey: "PASTE_YOUR_API_KEY_HERE"
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 app.post("/generate", async (req, res) => {
