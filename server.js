@@ -3,38 +3,78 @@ import cors from "cors";
 import OpenAI from "openai";
 
 const app = express();
-app.use(cors());
-app.use(express.json());
 
+// 🔥 Middleware
+app.use(cors());
+app.use(express.json({ limit: "1mb" })); // 413 fix
+
+// 🔥 OpenAI setup
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+// 🔥 Health check route
+app.get("/", (req, res) => {
+  res.send("Server is running 🚀");
+});
+
+// 🔥 AI Quiz Generator
 app.post("/generate", async (req, res) => {
-  const { text, difficulty, num } = req.body;
+  try {
+    const { text, difficulty, num } = req.body;
 
-  const prompt = `
-Generate ${num} ${difficulty} level MCQs from this text:
+    if (!text || !difficulty || !num) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
 
-${text}
+    // 🔥 Trim text (important)
+    const trimmedText = text.slice(0, 2000);
 
-Format:
-Question:
-Options:
-Answer:
+    const prompt = `
+Generate ${num} ${difficulty} level MCQs from this text.
+
+Rules:
+- Each question must have 4 options (A, B, C, D)
+- Clearly mention correct answer
+- Keep questions short
+
+Text:
+${trimmedText}
+
+Format EXACTLY like this:
+
+Question: ...
+A. ...
+B. ...
+C. ...
+D. ...
+Answer: ...
 `;
 
-  try {
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        { role: "user", content: prompt }
+      ]
     });
 
-    res.json({ data: response.choices[0].message.content });
+    const output = response.choices[0].message.content;
 
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.json({ data: output });
+
+  } catch (error) {
+    console.error("🔥 ERROR:", error.message);
+
+    res.status(500).json({
+      error: "AI generation failed",
+      details: error.message
+    });
   }
 });
 
-app.listen(3000, () => console.log("🔥 Server running on http://localhost:3000"));
+// 🔥 Start server
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
