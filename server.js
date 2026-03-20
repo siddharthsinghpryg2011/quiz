@@ -13,52 +13,60 @@ app.get("/", (req, res) => {
   res.send("🚀 Gemini Server Running");
 });
 
-// Generate quiz
+// Generate Quiz
 app.post("/generate", async (req, res) => {
   try {
     let { text, difficulty, num } = req.body;
 
-    if (!text) {
-      text = "Force and motion class 9 science";
-    }
+    if (!text) text = "Class 9 science chapter";
+    if (!difficulty) difficulty = "easy";
+    if (!num) num = 5;
 
     const prompt = `
-Generate ${num} ${difficulty} MCQs from this.
+Create ${num} ${difficulty} MCQs from this text.
 
-Rules:
-- Each question must have 4 options (A, B, C, D)
-- Mention correct answer clearly
-- Keep format clean
-
-Text:
-${text}
-
-Format:
+STRICT FORMAT:
 Question: ...
 A. ...
 B. ...
 C. ...
 D. ...
 Answer: ...
+
+Text:
+${text}
 `;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
+          contents: [
+            {
+              parts: [{ text: prompt }]
+            }
+          ]
         })
       }
     );
 
     const data = await response.json();
 
-    const output =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    console.log("Gemini RAW:", JSON.stringify(data, null, 2));
+
+    let output = "";
+
+    if (data.candidates && data.candidates.length > 0) {
+      const parts = data.candidates[0].content.parts;
+
+      if (parts && parts.length > 0) {
+        output = parts.map(p => p.text).join("\n");
+      }
+    }
 
     res.json({ data: output });
 
@@ -69,4 +77,7 @@ Answer: ...
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("🚀 Server running"));
+
+app.listen(PORT, () => {
+  console.log("🚀 Server running");
+});
