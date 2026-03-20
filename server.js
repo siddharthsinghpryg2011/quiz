@@ -6,35 +6,40 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
-// 🔥 Gemini API
 const API_KEY = process.env.GEMINI_API_KEY;
 
+// Health check
 app.get("/", (req, res) => {
-  res.send("Gemini Server Running 🚀");
+  res.send("🚀 Gemini Server Running");
 });
 
+// Generate quiz
 app.post("/generate", async (req, res) => {
   try {
-    const { text, difficulty, num } = req.body;
+    let { text, difficulty, num } = req.body;
+
+    if (!text) {
+      text = "Force and motion class 9 science";
+    }
 
     const prompt = `
-Generate ${num} ${difficulty} MCQs from this text.
+Generate ${num} ${difficulty} MCQs from this.
 
 Rules:
-- 4 options (A, B, C, D)
-- Give correct answer
-- Short questions
+- Each question must have 4 options (A, B, C, D)
+- Mention correct answer clearly
+- Keep format clean
 
 Text:
 ${text}
 
 Format:
-Question:
-A.
-B.
-C.
-D.
-Answer:
+Question: ...
+A. ...
+B. ...
+C. ...
+D. ...
+Answer: ...
 `;
 
     const response = await fetch(
@@ -45,29 +50,23 @@ Answer:
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: prompt }]
-            }
-          ]
+          contents: [{ parts: [{ text: prompt }] }]
         })
       }
     );
 
     const data = await response.json();
 
-    const output = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const output =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
     res.json({ data: output });
 
   } catch (err) {
-    console.error(err);
+    console.error("ERROR:", err.message);
     res.status(500).json({ error: "Gemini failed" });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log("🚀 Gemini server running");
-});
+app.listen(PORT, () => console.log("🚀 Server running"));
